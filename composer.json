@@ -1,0 +1,25 @@
+{
+    "name": "freescout/mailboxactivecount",
+    "description": "",
+    "authors": [
+        {
+            "name": "FreeScout",
+            "email": "support@freescout.net"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\MailboxActiveCount\\Providers\\MailboxActiveCountServiceProvider"
+            ],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\MailboxActiveCount\\": ""
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+    "name": "Mailbox Active Count",
+    "alias": "mailboxactivecount",
+    "description": "Shows a badge with the number of active conversations next to each mailbox name in the top navigation menu.",
+    "version": "1.0",
+    "detailsUrl": "",
+    "author": "Webdados - Marco Almeida",
+    "authorUrl": "https://www.webdados.pt",
+    "img": "/modules/mailboxactivecount/images/icon.png",
+    "requiredAppVersion": "1.8.0",
+    "license": "AGPL-3.0",
+    "keywords": [],
+    "active": 0,
+    "order": 0,
+    "providers": [
+        "Modules\\MailboxActiveCount\\Providers\\MailboxActiveCountServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}
