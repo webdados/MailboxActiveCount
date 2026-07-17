@@ -52,6 +52,17 @@ class MailboxActiveCountServiceProvider extends ServiceProvider
 
         // Inline styles for the badge, printed once in <head>.
         \Eventy::addAction('layout.head', array($this, 'printStyles'));
+
+        // Cache invalidation: clear the affected mailbox's cached count
+        // whenever something changes which conversations count as active
+        // (status change, move to/from trash, new conversation). The 1
+        // minute TTL in getActiveCount() remains as a safety net for any
+        // path not covered below.
+        \Eventy::addAction('conversation.status_changed', array($this, 'clearCacheForConversation'), 20, 1);
+        \Eventy::addAction('conversation.state_changed', array($this, 'clearCacheForConversation'), 20, 1);
+        \Eventy::addAction('conversation.created_by_customer', array($this, 'clearCacheForConversation'), 20, 1);
+        \Eventy::addAction('conversation.created_by_user_can_undo', array($this, 'clearCacheForConversation'), 20, 1);
+        \Eventy::addAction('conversation.moved', array($this, 'clearCacheForMovedConversation'), 20, 3);
     }
 
     /**
@@ -146,13 +157,56 @@ HTML;
      */
     protected function getActiveCount($mailbox)
     {
-        $cache_key = 'mailboxactivecount_active_'.$mailbox->id;
-
-        return \Cache::remember($cache_key, self::CACHE_MINUTES, function () use ($mailbox) {
+        return \Cache::remember($this->cacheKey($mailbox->id), self::CACHE_MINUTES, function () use ($mailbox) {
             return Conversation::where('mailbox_id', $mailbox->id)
                 ->where('state', Conversation::STATE_PUBLISHED)
                 ->where('status', Conversation::STATUS_ACTIVE)
                 ->count();
         });
+    }
+
+    /**
+     * Build the cache key used to store a mailbox's active count.
+     *
+     * @param int $mailbox_id
+     * @return string
+     */
+    protected function cacheKey($mailbox_id)
+    {
+        return 'mailboxactivecount_active_'.$mailbox_id;
+    }
+
+    /**
+     * Clear the cached active count for a conversation's mailbox. Hooked to
+     * events that can change which conversations count as active: status
+     * changes, moves to/from the trash (state changes), and new
+     * conversations (customer- or agent-created).
+     *
+     * @param \App\Conversation $conversation
+     * @return void
+     */
+    public function clearCacheForConversation($conversation)
+    {
+        if ($conversation && $conversation->mailbox_id) {
+            \Cache::forget($this->cacheKey($conversation->mailbox_id));
+        }
+    }
+
+    /**
+     * Clear the cached active count for both mailboxes involved when a
+     * conversation is moved from one mailbox to another.
+     *
+     * @param \App\Conversation $conversation Conversation, already in its new mailbox.
+     * @param \App\User $user
+     * @param \App\Mailbox $prev_mailbox
+     * @return void
+     */
+    public function clearCacheForMovedConversation($conversation, $user, $prev_mailbox)
+    {
+        $this->clearCacheForConversation($conversation);
+
+        if ($prev_mailbox && $prev_mailbox->id) {
+            \Cache::forget($this->cacheKey($prev_mailbox->id));
+        }
     }
 }
